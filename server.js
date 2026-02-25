@@ -1,16 +1,3 @@
-const express = require("express");
-
-const app = express();
-app.use(express.json());
-
-let donations = [];
-
-// Home test
-app.get("/", (req, res) => {
-  res.json({ success: true, message: "Server is live" });
-});
-
-// BAGIBAGI DISCORD WEBHOOK RECEIVER
 app.post("/api/bagibagi/webhook", (req, res) => {
   console.log("Webhook received:", req.body);
 
@@ -19,26 +6,29 @@ app.post("/api/bagibagi/webhook", (req, res) => {
     let amount = 0;
     let message = "";
 
-    const embedText = req.body.embeds;
+    const embed = req.body.embeds && req.body.embeds[0];  // Take the first embed from the array
 
-    if (embedText && typeof embedText === "string") {
-
-      // ✅ Extract amount
-      const amountMatch = embedText.match(/([\d,.]+)\s*Koin/i);
-      if (amountMatch) {
-        amount = Number(amountMatch[1].replace(/[,.]/g, ""));
+    if (embed) {
+      // ✅ Extract donor name from the embed title
+      if (embed.title) {
+        donorName = embed.title.trim();
       }
 
-      // ✅ Extract message
-      const messageMatch = embedText.match(/'\*\*Pesan\*\*'.*?`([^`]+)`/i);
-      if (messageMatch) {
-        message = messageMatch[1];
+      // ✅ Extract donation amount from fields
+      const amountField = embed.fields && embed.fields.find(field => field.name === "Amount");
+      if (amountField && amountField.value) {
+        const amountMatch = amountField.value.match(/([\d,.]+)\s*Koin/i);
+        if (amountMatch) {
+          amount = Number(amountMatch[1].replace(/[,.]/g, ""));
+        }
       }
 
-      // ✅ Extract donor name if exists
-      const nameMatch = embedText.match(/title:\s*(.*?)\s*mengirim/i);
-      if (nameMatch) {
-        donorName = nameMatch[1].trim();
+      // ✅ Extract message from description (if any)
+      if (embed.description) {
+        const messageMatch = embed.description.match(/'\*\*Pesan\*\*'.*?`([^`]+)`/i);
+        if (messageMatch) {
+          message = messageMatch[1];
+        }
       }
     }
 
