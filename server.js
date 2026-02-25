@@ -1,3 +1,16 @@
+const express = require("express");
+
+const app = express();
+app.use(express.json());
+
+let donations = [];
+
+// Home test
+app.get("/", (req, res) => {
+  res.json({ success: true, message: "Server is live" });
+});
+
+// BAGIBAGI DISCORD WEBHOOK RECEIVER
 app.post("/api/bagibagi/webhook", (req, res) => {
   console.log("Webhook received:", req.body);
 
@@ -46,4 +59,5 @@ app.post("/api/bagibagi/webhook", (req, res) => {
     res.json({ success: false });
   }
 });
+
 
