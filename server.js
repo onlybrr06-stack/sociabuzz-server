@@ -1,3 +1,16 @@
+const express = require("express");
+
+const app = express();
+app.use(express.json());
+
+let donations = [];
+
+// Test route
+app.get("/", (req, res) => {
+  res.json({ success: true, message: "Server is live" });
+});
+
+// BAGIBAGI WEBHOOK
 app.post("/api/bagibagi/webhook", (req, res) => {
   console.log("Webhook received:", req.body);
 
@@ -7,19 +20,17 @@ app.post("/api/bagibagi/webhook", (req, res) => {
 
   try {
     if (req.body.embeds) {
-      // Convert string to JSON safely
       const embeds = JSON.parse(req.body.embeds.replace(/'/g, '"'));
-
       const embed = embeds[0];
 
-      // Extract amount from title
+      // Extract amount
       const title = embed.title || "";
       const amountMatch = title.match(/([\d,]+)\s*Koin/);
       if (amountMatch) {
         amount = Number(amountMatch[1].replace(/,/g, ""));
       }
 
-      // Extract message from fields
+      // Extract message
       if (embed.fields) {
         const pesanField = embed.fields.find(f =>
           f.name.includes("Pesan")
@@ -30,8 +41,7 @@ app.post("/api/bagibagi/webhook", (req, res) => {
         }
       }
 
-      // If donor types username like:
-      // NeonClub | Hello bro
+      // If user types: Username | Message
       if (message.includes("|")) {
         const parts = message.split("|");
         donorName = parts[0].trim();
@@ -54,3 +64,17 @@ app.post("/api/bagibagi/webhook", (req, res) => {
     res.json({ success: false });
   }
 });
+
+// Roblox fetch
+app.get("/api/sociabuzz/get-donations", (req, res) => {
+  res.json({
+    success: true,
+    donations: donations
+  });
+
+  donations = [];
+});
+
+const PORT = process.env.PORT || 3000;
+app.listen(PORT, () => console.log("Server running on port", PORT));
+
