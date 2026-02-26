@@ -1,34 +1,51 @@
+const express = require("express");
+
+const app = express();
+app.use(express.json());
+
+let donations = [];
+
+// Test route
+app.get("/", (req, res) => {
+  res.json({ success: true, message: "Server is live" });
+});
+
+// BAGIBAGI WEBHOOK
 app.post("/api/bagibagi/webhook", (req, res) => {
   console.log("Webhook received:", req.body);
 
+  let donorName = "Unknown";
+  let amount = 0;
+  let message = "";
+
   try {
-    let donorName = "Seseorang";
-    let amount = 0;
-    let message = "";
+    if (req.body.embeds) {
+      const embeds = JSON.parse(req.body.embeds.replace(/'/g, '"'));
+      const embed = embeds[0];
 
-    const embed = req.body.embeds && req.body.embeds[0];  // Take the first embed from the array
-
-    if (embed) {
-      // ✅ Extract donor name from the embed title
-      if (embed.title) {
-        donorName = embed.title.trim();
+      // Extract amount
+      const title = embed.title || "";
+      const amountMatch = title.match(/([\d,]+)\s*Koin/);
+      if (amountMatch) {
+        amount = Number(amountMatch[1].replace(/,/g, ""));
       }
 
-      // ✅ Extract donation amount from fields
-      const amountField = embed.fields && embed.fields.find(field => field.name === "Amount");
-      if (amountField && amountField.value) {
-        const amountMatch = amountField.value.match(/([\d,.]+)\s*Koin/i);
-        if (amountMatch) {
-          amount = Number(amountMatch[1].replace(/[,.]/g, ""));
+      // Extract message
+      if (embed.fields) {
+        const pesanField = embed.fields.find(f =>
+          f.name.includes("Pesan")
+        );
+
+        if (pesanField) {
+          message = pesanField.value.replace(/`/g, "");
         }
       }
 
-      // ✅ Extract message from description (if any)
-      if (embed.description) {
-        const messageMatch = embed.description.match(/'\*\*Pesan\*\*'.*?`([^`]+)`/i);
-        if (messageMatch) {
-          message = messageMatch[1];
-        }
+      // If user types: Username | Message
+      if (message.includes("|")) {
+        const parts = message.split("|");
+        donorName = parts[0].trim();
+        message = parts[1].trim();
       }
     }
 
@@ -40,8 +57,6 @@ app.post("/api/bagibagi/webhook", (req, res) => {
       id: Date.now().toString()
     });
 
-    console.log("Parsed donation:", donorName, amount, message);
-
     res.json({ success: true });
 
   } catch (err) {
@@ -50,4 +65,16 @@ app.post("/api/bagibagi/webhook", (req, res) => {
   }
 });
 
+// Roblox fetch
+app.get("/api/sociabuzz/get-donations", (req, res) => {
+  res.json({
+    success: true,
+    donations: donations
+  });
+
+  donations = [];
+});
+
+const PORT = process.env.PORT || 3000;
+app.listen(PORT, () => console.log("Server running on port", PORT));
 
